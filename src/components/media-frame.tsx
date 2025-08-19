@@ -248,47 +248,56 @@ export const MediaFrame: React.FC<{
 			) as HTMLElement;
 			
 			if (currentParagraphElement) {
-				// Get the element's position within the scrollable content
-				const containerScrollTop = container.scrollTop;
+				// Dynamically get the current container dimensions
 				const containerHeight = container.clientHeight;
+				const containerScrollHeight = container.scrollHeight;
 				const containerPadding = 16; // Account for padding
 				
-				// Get element position relative to the transcript-content div
-				const transcriptContent = container.querySelector('.transcript-content') as HTMLElement;
-				if (transcriptContent) {
-					const elementOffsetFromContent = currentParagraphElement.offsetTop;
+				// Only scroll if content overflows the container
+				if (containerScrollHeight > containerHeight) {
+					// Get element position using getBoundingClientRect for accurate positioning
+					const containerRect = container.getBoundingClientRect();
+					const elementRect = currentParagraphElement.getBoundingClientRect();
 					const elementHeight = currentParagraphElement.offsetHeight;
 					
-					// Calculate target scroll position to center the paragraph
-					const targetScrollTop = elementOffsetFromContent - (containerHeight / 2) + (elementHeight / 2);
+					// Calculate element's current position relative to the container's viewport
+					const elementRelativeTop = elementRect.top - containerRect.top + container.scrollTop;
 					
-					// Clamp to valid scroll range
-					const maxScrollTop = Math.max(0, transcriptContent.scrollHeight - containerHeight + (containerPadding * 2));
+					// Calculate target scroll position to center the paragraph in the visible area (with slight offset)
+					const yOffset = -100; // Offset by 50px higher than center
+					const targetScrollTop = elementRelativeTop - (containerHeight / 2) + (elementHeight / 2) - yOffset;
+					
+					// Clamp to valid scroll range based on current container size  
+					const maxScrollTop = Math.max(0, containerScrollHeight - containerHeight);
 					const clampedScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
 					
-					// Smooth scroll with requestAnimationFrame for better performance
-					const startScrollTop = container.scrollTop;
-					const scrollDistance = clampedScrollTop - startScrollTop;
-					const duration = 300; // ms
-					let startTime: number | null = null;
+					// Only animate scroll if there's a meaningful distance to scroll
+					const currentScrollTop = container.scrollTop;
+					const scrollDistance = clampedScrollTop - currentScrollTop;
 					
-					const animateScroll = (currentTime: number) => {
-						if (startTime === null) startTime = currentTime;
-						const elapsed = currentTime - startTime;
-						const progress = Math.min(elapsed / duration, 1);
+					if (Math.abs(scrollDistance) > 10) { // Only scroll if distance > 10px
+						// Smooth scroll with requestAnimationFrame for better performance
+						const duration = 300; // ms
+						let startTime: number | null = null;
 						
-						// Easing function for smooth animation
-						const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
-						const easedProgress = easeInOutQuad(progress);
+						const animateScroll = (currentTime: number) => {
+							if (startTime === null) startTime = currentTime;
+							const elapsed = currentTime - startTime;
+							const progress = Math.min(elapsed / duration, 1);
+							
+							// Easing function for smooth animation
+							const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+							const easedProgress = easeInOutQuad(progress);
+							
+							container.scrollTop = currentScrollTop + scrollDistance * easedProgress;
+							
+							if (progress < 1) {
+								requestAnimationFrame(animateScroll);
+							}
+						};
 						
-						container.scrollTop = startScrollTop + scrollDistance * easedProgress;
-						
-						if (progress < 1) {
-							requestAnimationFrame(animateScroll);
-						}
-					};
-					
-					requestAnimationFrame(animateScroll);
+						requestAnimationFrame(animateScroll);
+					}
 				}
 			}
 		}

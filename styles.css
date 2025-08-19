@@ -364,7 +364,9 @@ If your plugin does not need CSS, delete this file.
 }
 
 .transcript-container {
-	height: 320px;
+	min-height: 200px;
+	max-height: 60vh;
+	height: auto;
 	background-color: var(--titlebar-background-focused);
 	padding: 16px;
 	overflow-y: auto;
