@@ -28,6 +28,8 @@ export interface MediaNotesPluginSettings {
 	displayTimestamp: boolean;
 	pauseOnTimestampInsert: boolean;
 	defaultSplitMode: "Horizontal" | "Vertical";
+	showTranscript: boolean;
+	transcriptLanguage: string;
 	mediaData: {
 		[id: string]: {
 			mediaLink: string;
@@ -49,6 +51,8 @@ const DEFAULT_SETTINGS: MediaNotesPluginSettings = {
 	backgroundColor: "#000000",
 	progressBarColor: "#FF0000",
 	timestampTemplate: "[{ts}]({link})\n",
+	showTranscript: true,
+	transcriptLanguage: "en",
 	mediaData: {},
 };
 
@@ -728,6 +732,35 @@ class SettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.pauseOnTimestampInsert)
 					.onChange(async (value) => {
 						this.plugin.settings.pauseOnTimestampInsert = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Show transcript")
+			.setDesc(
+				"Display YouTube video transcript below the player"
+			)
+			.addToggle((val) =>
+				val
+					.setValue(this.plugin.settings.showTranscript)
+					.onChange(async (value) => {
+						this.plugin.settings.showTranscript = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Transcript language")
+			.setDesc(
+				"Preferred language code for transcript (e.g., en, es, fr, de)"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("en")
+					.setValue(this.plugin.settings.transcriptLanguage)
+					.onChange(async (value) => {
+						this.plugin.settings.transcriptLanguage = value || "en";
 						await this.plugin.saveSettings();
 					})
 			);

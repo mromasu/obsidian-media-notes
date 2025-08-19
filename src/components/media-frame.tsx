@@ -3,6 +3,8 @@ import { formatTimestamp } from "../main";
 import * as React from "react";
 import YouTube, { YouTubeEvent, YouTubeProps } from "react-youtube";
 import { CSSTransition } from "react-transition-group";
+import { YoutubeTranscript } from "../youtube-transcript";
+import type { TranscriptLine } from "../types";
 
 export const getVideoId = (url: string) => {
 	const urlParams = new URLSearchParams(new URL(url).search);
@@ -29,6 +31,11 @@ export const MediaFrame: React.FC<{
 	// const currentTime = ytRef.current?.getCurrentTime();
 	const [maxTime, setMaxTime] = React.useState<number>(0);
 	const [currentTimestamp, setCurrentTimestamp] = React.useState<number>(0);
+
+	// Transcript state
+	const [transcript, setTranscript] = React.useState<TranscriptLine[]>([]);
+	const [transcriptLoading, setTranscriptLoading] = React.useState<boolean>(false);
+	const [transcriptError, setTranscriptError] = React.useState<string | null>(null);
 
 	// Calculate the width of the progress bar as a percentage
 	const progressBarWidth = (currentTimestamp / maxTime) * 100;
@@ -86,6 +93,36 @@ export const MediaFrame: React.FC<{
 			updateTimestamp();
 		}
 	}, [context?.showTimestamp]);
+
+	// Fetch transcript when component mounts
+	React.useEffect(() => {
+		const fetchTranscript = async () => {
+			try {
+				setTranscriptLoading(true);
+				setTranscriptError(null);
+				
+				const transcriptData = await YoutubeTranscript.getTranscript(mediaLink, {
+					lang: context?.settings?.transcriptLanguage || "en"
+				});
+				setTranscript(transcriptData.lines);
+			} catch (error) {
+				console.error("Failed to fetch transcript:", error);
+				setTranscriptError(error instanceof Error ? error.message : "Failed to fetch transcript");
+			} finally {
+				setTranscriptLoading(false);
+			}
+		};
+
+		if (videoId && context?.settings?.showTranscript) {
+			fetchTranscript();
+		}
+	}, [mediaLink, videoId, context?.settings?.showTranscript, context?.settings?.transcriptLanguage]);
+
+	// Handle transcript timestamp clicks
+	const handleTranscriptClick = (offsetMs: number) => {
+		const offsetSeconds = offsetMs / 1000;
+		ytRef.current?.getInternalPlayer()?.seekTo(offsetSeconds, true);
+	};
 
 	const seekBackRef = React.useRef(null);
 	const seekForwardRef = React.useRef(null);
@@ -252,6 +289,34 @@ export const MediaFrame: React.FC<{
 					></div>
 				</div>
 			</div>
+			{context?.settings?.showTranscript && (
+				<div className="transcript-container">
+					{transcriptLoading && (
+						<div className="transcript-loading">Loading transcript...</div>
+					)}
+					{transcriptError && (
+						<div className="transcript-error">
+							Failed to load transcript: {transcriptError}
+						</div>
+					)}
+					{transcript.length > 0 && !transcriptLoading && (
+						<div className="transcript-content">
+							{transcript.map((line, index) => (
+								<span key={index}>
+									<button
+										className="transcript-timestamp"
+										onClick={() => handleTranscriptClick(line.offset)}
+										title={formatTimestamp(line.offset / 1000)}
+									>
+										[{formatTimestamp(line.offset / 1000)}]
+									</button>
+									<span className="transcript-text">{line.text} </span>
+								</span>
+							))}
+						</div>
+					)}
+				</div>
+			)}
 		</div>
 	);
 };
