@@ -24,7 +24,7 @@ If your plugin does not need CSS, delete this file.
 }
 
 .media-container {
-	height: 100%;
+	height: 50%;
 	width: 100%;
 	position: relative;
 	max-width: var(--file-line-width);
@@ -360,4 +360,11 @@ If your plugin does not need CSS, delete this file.
 	animation-delay: 0.2s;
 	animation-iteration-count: infinite;
 	animation-timing-function: linear;
+}
+
+.transcript-container {
+	height: 100%;
+	background: #fff;
+	padding: 16px;
+	overflow: scroll;
 }
