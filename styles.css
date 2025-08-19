@@ -21,6 +21,7 @@ If your plugin does not need CSS, delete this file.
 .media-top-container {
 	height: 100%;
 	width: 100%;
+	background-color: var(--titlebar-background-focused);
 }
 
 .media-container {
@@ -363,8 +364,62 @@ If your plugin does not need CSS, delete this file.
 }
 
 .transcript-container {
-	height: 100%;
-	background: #fff;
+	height: 400px;
+	background-color: var(--titlebar-background-focused);
 	padding: 16px;
-	overflow: scroll;
+	overflow-y: auto;
+	overflow-x: hidden;
+	position: relative;
+}
+
+/* Enhanced transcript paragraph styling */
+.transcript-paragraph {
+	margin-bottom: 16px;
+	padding: 12px;
+	border-left: 3px solid #e0e0e0;
+	background-color: #fafafa;
+	transition: all 0.3s ease;
+	border-radius: 4px;
+}
+
+/* Current paragraph highlighting */
+.transcript-paragraph.current-paragraph {
+	border-left-color: #4a90e2;
+	background-color: #f0f7ff;
+	box-shadow: 0 2px 8px rgba(74, 144, 226, 0.1);
+}
+
+/* Transcript sentence styling */
+.transcript-sentence {
+	display: inline;
+	transition: all 0.2s ease;
+}
+
+/* Current sentence highlighting */
+.transcript-sentence.current-sentence {
+	background-color: #fffacd;
+	padding: 2px 4px;
+	border-radius: 3px;
+	box-shadow: 0 1px 3px rgba(255, 215, 0, 0.3);
+}
+
+/* Dark mode support */
+.theme-dark .transcript-container {
+	background: #1e1e1e;
+	color: #e0e0e0;
+}
+
+.theme-dark .transcript-paragraph {
+	background-color: #2a2a2a;
+	border-left-color: #555;
+}
+
+.theme-dark .transcript-paragraph.current-paragraph {
+	border-left-color: #64b5f6;
+	background-color: #1a2332;
+}
+
+.theme-dark .transcript-sentence.current-sentence {
+	background-color: #3d3d1a;
+	color: #fff;
 }

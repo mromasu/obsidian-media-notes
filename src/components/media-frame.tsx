@@ -6,9 +6,74 @@ import { CSSTransition } from "react-transition-group";
 import { YoutubeTranscript } from "../youtube-transcript";
 import type { TranscriptLine } from "../types";
 
+// Types for enhanced transcript
+interface TranscriptSentence {
+	text: string;
+	startOffset: number;
+	endOffset: number;
+	originalIndex: number;
+}
+
+interface TranscriptParagraph {
+	sentences: TranscriptSentence[];
+	startOffset: number;
+	endOffset: number;
+}
+
 export const getVideoId = (url: string) => {
 	const urlParams = new URLSearchParams(new URL(url).search);
 	return urlParams.get("v");
+};
+
+// Helper function to split text into sentences
+const splitIntoSentences = (text: string): string[] => {
+	// Split on sentence-ending punctuation followed by whitespace or end of string
+	// Also handle common abbreviations and edge cases
+	const sentences = text
+		.replace(/([.!?])\s+/g, "$1|")
+		.split("|")
+		.map(s => s.trim())
+		.filter(s => s.length > 0);
+	
+	return sentences;
+};
+
+// Function to group transcript lines into paragraphs of 3 sentences each
+const groupTranscriptIntoParagraphs = (transcriptLines: TranscriptLine[]): TranscriptParagraph[] => {
+	const sentences: TranscriptSentence[] = [];
+	
+	// First, convert each transcript line into sentences
+	transcriptLines.forEach((line, lineIndex) => {
+		const lineSentences = splitIntoSentences(line.text);
+		
+		lineSentences.forEach((sentenceText, sentenceIndex) => {
+			// Calculate timing - distribute line duration across sentences
+			const sentenceDuration = line.duration / lineSentences.length;
+			const sentenceStartOffset = line.offset + (sentenceIndex * sentenceDuration);
+			
+			sentences.push({
+				text: sentenceText,
+				startOffset: sentenceStartOffset,
+				endOffset: sentenceStartOffset + sentenceDuration,
+				originalIndex: lineIndex
+			});
+		});
+	});
+	
+	// Group sentences into paragraphs of 3
+	const paragraphs: TranscriptParagraph[] = [];
+	
+	for (let i = 0; i < sentences.length; i += 3) {
+		const paragraphSentences = sentences.slice(i, i + 3);
+		
+		paragraphs.push({
+			sentences: paragraphSentences,
+			startOffset: paragraphSentences[0].startOffset,
+			endOffset: paragraphSentences[paragraphSentences.length - 1].endOffset
+		});
+	}
+	
+	return paragraphs;
 };
 
 export const MediaFrame: React.FC<{
@@ -36,6 +101,12 @@ export const MediaFrame: React.FC<{
 	const [transcript, setTranscript] = React.useState<TranscriptLine[]>([]);
 	const [transcriptLoading, setTranscriptLoading] = React.useState<boolean>(false);
 	const [transcriptError, setTranscriptError] = React.useState<string | null>(null);
+	
+	// Enhanced transcript state
+	const [transcriptParagraphs, setTranscriptParagraphs] = React.useState<TranscriptParagraph[]>([]);
+	const [currentParagraphIndex, setCurrentParagraphIndex] = React.useState<number>(-1);
+	const [currentSentenceIndex, setCurrentSentenceIndex] = React.useState<number>(-1);
+	const transcriptContainerRef = React.useRef<HTMLDivElement>(null);
 
 	// Calculate the width of the progress bar as a percentage
 	const progressBarWidth = (currentTimestamp / maxTime) * 100;
@@ -105,6 +176,10 @@ export const MediaFrame: React.FC<{
 					lang: context?.settings?.transcriptLanguage || "en"
 				});
 				setTranscript(transcriptData.lines);
+				
+				// Generate paragraph structure
+				const paragraphs = groupTranscriptIntoParagraphs(transcriptData.lines);
+				setTranscriptParagraphs(paragraphs);
 			} catch (error) {
 				console.error("Failed to fetch transcript:", error);
 				setTranscriptError(error instanceof Error ? error.message : "Failed to fetch transcript");
@@ -123,6 +198,101 @@ export const MediaFrame: React.FC<{
 		const offsetSeconds = offsetMs / 1000;
 		ytRef.current?.getInternalPlayer()?.seekTo(offsetSeconds, true);
 	};
+
+	// Update current paragraph and sentence based on video position
+	const updateCurrentPosition = React.useCallback(() => {
+		if (transcriptParagraphs.length === 0) return;
+		
+		const currentTimeMs = currentTimestamp * 1000;
+		let newParagraphIndex = -1;
+		let newSentenceIndex = -1;
+		
+		// Find current paragraph
+		for (let i = 0; i < transcriptParagraphs.length; i++) {
+			const paragraph = transcriptParagraphs[i];
+			if (currentTimeMs >= paragraph.startOffset && currentTimeMs <= paragraph.endOffset) {
+				newParagraphIndex = i;
+				
+				// Find current sentence within paragraph
+				for (let j = 0; j < paragraph.sentences.length; j++) {
+					const sentence = paragraph.sentences[j];
+					if (currentTimeMs >= sentence.startOffset && currentTimeMs <= sentence.endOffset) {
+						newSentenceIndex = j;
+						break;
+					}
+				}
+				break;
+			}
+		}
+		
+		// Update indices if they changed
+		if (newParagraphIndex !== currentParagraphIndex) {
+			setCurrentParagraphIndex(newParagraphIndex);
+		}
+		if (newSentenceIndex !== currentSentenceIndex) {
+			setCurrentSentenceIndex(newSentenceIndex);
+		}
+	}, [transcriptParagraphs, currentTimestamp, currentParagraphIndex, currentSentenceIndex]);
+
+	// Update position when timestamp changes
+	React.useEffect(() => {
+		updateCurrentPosition();
+	}, [updateCurrentPosition]);
+
+	// Auto-scroll to current paragraph within transcript container only
+	React.useEffect(() => {
+		if (currentParagraphIndex >= 0 && transcriptContainerRef.current) {
+			const container = transcriptContainerRef.current;
+			const currentParagraphElement = container.querySelector(
+				`[data-paragraph-index="${currentParagraphIndex}"]`
+			) as HTMLElement;
+			
+			if (currentParagraphElement) {
+				// Get the element's position within the scrollable content
+				const containerScrollTop = container.scrollTop;
+				const containerHeight = container.clientHeight;
+				const containerPadding = 16; // Account for padding
+				
+				// Get element position relative to the transcript-content div
+				const transcriptContent = container.querySelector('.transcript-content') as HTMLElement;
+				if (transcriptContent) {
+					const elementOffsetFromContent = currentParagraphElement.offsetTop;
+					const elementHeight = currentParagraphElement.offsetHeight;
+					
+					// Calculate target scroll position to center the paragraph
+					const targetScrollTop = elementOffsetFromContent - (containerHeight / 2) + (elementHeight / 2);
+					
+					// Clamp to valid scroll range
+					const maxScrollTop = Math.max(0, transcriptContent.scrollHeight - containerHeight + (containerPadding * 2));
+					const clampedScrollTop = Math.max(0, Math.min(targetScrollTop, maxScrollTop));
+					
+					// Smooth scroll with requestAnimationFrame for better performance
+					const startScrollTop = container.scrollTop;
+					const scrollDistance = clampedScrollTop - startScrollTop;
+					const duration = 300; // ms
+					let startTime: number | null = null;
+					
+					const animateScroll = (currentTime: number) => {
+						if (startTime === null) startTime = currentTime;
+						const elapsed = currentTime - startTime;
+						const progress = Math.min(elapsed / duration, 1);
+						
+						// Easing function for smooth animation
+						const easeInOutQuad = (t: number) => t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+						const easedProgress = easeInOutQuad(progress);
+						
+						container.scrollTop = startScrollTop + scrollDistance * easedProgress;
+						
+						if (progress < 1) {
+							requestAnimationFrame(animateScroll);
+						}
+					};
+					
+					requestAnimationFrame(animateScroll);
+				}
+			}
+		}
+	}, [currentParagraphIndex]);
 
 	const seekBackRef = React.useRef(null);
 	const seekForwardRef = React.useRef(null);
@@ -290,7 +460,7 @@ export const MediaFrame: React.FC<{
 				</div>
 			</div>
 			{context?.settings?.showTranscript && (
-				<div className="transcript-container">
+				<div className="transcript-container" ref={transcriptContainerRef}>
 					{transcriptLoading && (
 						<div className="transcript-loading">Loading transcript...</div>
 					)}
@@ -299,19 +469,36 @@ export const MediaFrame: React.FC<{
 							Failed to load transcript: {transcriptError}
 						</div>
 					)}
-					{transcript.length > 0 && !transcriptLoading && (
+					{transcriptParagraphs.length > 0 && !transcriptLoading && (
 						<div className="transcript-content">
-							{transcript.map((line, index) => (
-								<span key={index}>
-									<button
-										className="transcript-timestamp"
-										onClick={() => handleTranscriptClick(line.offset)}
-										title={formatTimestamp(line.offset / 1000)}
-									>
-										[{formatTimestamp(line.offset / 1000)}]
-									</button>
-									<span className="transcript-text">{line.text} </span>
-								</span>
+							{transcriptParagraphs.map((paragraph, paragraphIndex) => (
+								<div 
+									key={paragraphIndex}
+									className={`transcript-paragraph ${
+										paragraphIndex === currentParagraphIndex ? 'current-paragraph' : ''
+									}`}
+									data-paragraph-index={paragraphIndex}
+								>
+									{paragraph.sentences.map((sentence, sentenceIndex) => (
+										<span 
+											key={`${paragraphIndex}-${sentenceIndex}`}
+											className={`transcript-sentence ${
+												paragraphIndex === currentParagraphIndex && 
+												sentenceIndex === currentSentenceIndex ? 'current-sentence' : ''
+											}`}
+										>
+											<button
+												className="transcript-timestamp"
+												onClick={() => handleTranscriptClick(sentence.startOffset)}
+												title={formatTimestamp(sentence.startOffset / 1000)}
+											>
+												[{formatTimestamp(sentence.startOffset / 1000)}]
+											</button>
+											<span className="transcript-text">{sentence.text}</span>
+											{sentenceIndex < paragraph.sentences.length - 1 && ' '}
+										</span>
+									))}
+								</div>
 							))}
 						</div>
 					)}
