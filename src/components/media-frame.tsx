@@ -487,13 +487,6 @@ export const MediaFrame: React.FC<{
 												sentenceIndex === currentSentenceIndex ? 'current-sentence' : ''
 											}`}
 										>
-											<button
-												className="transcript-timestamp"
-												onClick={() => handleTranscriptClick(sentence.startOffset)}
-												title={formatTimestamp(sentence.startOffset / 1000)}
-											>
-												[{formatTimestamp(sentence.startOffset / 1000)}]
-											</button>
 											<span className="transcript-text">{sentence.text}</span>
 											{sentenceIndex < paragraph.sentences.length - 1 && ' '}
 										</span>

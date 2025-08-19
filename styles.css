@@ -364,12 +364,16 @@ If your plugin does not need CSS, delete this file.
 }
 
 .transcript-container {
-	height: 400px;
+	height: 320px;
 	background-color: var(--titlebar-background-focused);
 	padding: 16px;
 	overflow-y: auto;
 	overflow-x: hidden;
 	position: relative;
+	user-select: text;
+	-webkit-user-select: text;
+	-moz-user-select: text;
+	-ms-user-select: text;
 }
 
 /* Enhanced transcript paragraph styling */
