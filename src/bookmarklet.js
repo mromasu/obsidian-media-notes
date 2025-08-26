@@ -22,7 +22,7 @@ function createMediaNote() {
 			title = title.replace(" - YouTube", "");
 			var encodedTitle = encodeURIComponent(title) + ".md";
 			var content = encodeURIComponent(
-				"---\nmedia_link: " + urlObj + "\n---\n#Video"
+				"---\npreview_link: " + urlObj + "\n---\n#Video"
 			);
 			window.open(
 				"obsidian://new?name=" + encodedTitle + "&content=" + content

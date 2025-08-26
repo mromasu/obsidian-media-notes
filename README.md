@@ -1,8 +1,22 @@
-# Obsidian Media Notes
+# Obsidian Web Preview
 
-<a href="https://obsidian.md/plugins?id=media-notes"><img src="https://img.shields.io/badge/media_notes-v1.3-6c31e3?logo=obsidian&style=for-the-badge"></a><br>
+<a href="https://obsidian.md/plugins?id=web-preview"><img src="https://img.shields.io/badge/web_preview-v1.3-6c31e3?logo=obsidian&style=for-the-badge"></a><br>
 
-A best-in-class video note-taking experience in Obsidian.
+## 🔀 Fork Notice
+
+This is a fork of the original [Media Notes](https://github.com/jemstelos/obsidian-media-notes) plugin, enhanced using Claude Code to add exciting new features:
+
+- ✨ **YouTube Transcript Support** - View and navigate video transcripts with automatic paragraph grouping and sentence-level highlighting
+- 🌐 **Web Preview Capability** - Preview any web page directly in your notes, not just YouTube videos
+- 🎯 **Enhanced Navigation** - Auto-scrolling transcript that follows video playback
+
+## 🙏 Special Thanks
+
+This plugin is built like Frankenstein from amazing existing code:
+- **[obsidian-media-notes](https://github.com/jemstelos/obsidian-media-notes)** - The foundation and core YouTube functionality
+- **[obsidian-open-gate](https://github.com/nguyenvanduocit/obsidian-open-gate)** - Web view integration and iframe handling
+
+See preview of a link.
 
 Seamlessly capture and replay insights from YouTube videos, podcasts, and lectures into your knowledge base.
 
@@ -15,13 +29,13 @@ Seamlessly capture and replay insights from YouTube videos, podcasts, and lectur
   <img src="images/media-notes.gif">
 </div>
 
-## Create Media Note
+## Create Web Preview Note
 
-Create media notes instantly from a Youtube page using the provided bookmarklet (instructions [here](https://obsidian-media-notes.netlify.app/)).
+Create preview notes instantly from a Youtube page using the provided bookmarklet (instructions [here](https://obsidian-media-notes.netlify.app/)).
 
 This lets you click a button in your browser bar and automatically create a note for the YouTube video you're watching while continuing playback from the current location.
 
-You can turn any Obsidian note into a media note by using the `Add file property` command, then typing in `media_link` and pasting the URL.
+You can turn any Obsidian note into a preview note by using the `Add file property` command, then typing in `preview_link` and pasting the URL.
 
 ## Media Controls
 
@@ -52,17 +66,17 @@ Customize the viewing and note-taking experience with settings:
 
 ## Format
 
-A media note is just a markdown note with a `media_link` [property](https://help.obsidian.md/Editing+and+formatting/Properties) that contains a supported URL format. For example:
+A preview note is just a markdown note with a `preview_link` [property](https://help.obsidian.md/Editing+and+formatting/Properties) that contains a supported URL format. For example:
 
 ```
 ---
-media_link: https://www.youtube.com/watch?v=MFXWY8TqSWw
+preview_link: https://www.youtube.com/watch?v=MFXWY8TqSWw
 ---
 
 [02:01]() - A useful insight, ties to my thought that [[Connections are key to creativity.]]
 ```
 
-Media notes display an embedded player fixed in the note pane, so that the note content can be scrolled while viewing the player.
+Preview notes display an embedded player fixed in the note pane, so that the note content can be scrolled while viewing the player.
 
 Timestamps are inserted into the note as markdown links with a timestamp format:
 `[3:05:53]()`
@@ -71,8 +85,8 @@ Clicking links that have the timestamp format (`HH:MM:SS`) will jump the playbac
 
 ## Installation
 
-<a href="https://obsidian.md/plugins?id=media-notes"><img src="https://img.shields.io/badge/Install_now-6c31e3?logo=obsidian"></a><br>
-Search "Media Notes" in the Obsidian Community Plugins library to find this plugin and add it.
+<a href="https://obsidian.md/plugins?id=web-preview"><img src="https://img.shields.io/badge/Install_now-6c31e3?logo=obsidian"></a><br>
+Search "Web Preview" in the Obsidian Community Plugins library to find this plugin and add it.
 
 ## Roadmap
 

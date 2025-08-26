@@ -109,8 +109,8 @@ const convertTimestampToSeconds = (timestamp: string) => {
 	return seconds;
 };
 
-const getMediaLinkFromFrontmatter = (frontmatter: Record<string, string>) => {
-	return frontmatter["media_link"] || frontmatter["media"];
+const getPreviewLinkFromFrontmatter = (frontmatter: Record<string, string>) => {
+	return frontmatter["preview_link"] || frontmatter["media_link"] || frontmatter["media"];
 };
 
 export default class MediaNotesPlugin extends Plugin {
@@ -164,8 +164,8 @@ export default class MediaNotesPlugin extends Plugin {
 		// @ts-ignore TS2339
 		const frontmatter = (parseYaml(markdownView.rawFrontmatter) ??
 			{}) as Record<string, string>;
-		// if there's a media_link
-		if (frontmatter && getMediaLinkFromFrontmatter(frontmatter)) {
+		// if there's a preview_link
+		if (frontmatter && getPreviewLinkFromFrontmatter(frontmatter)) {
 			const container = markdownView.containerEl;
 			const existingPlayerComponent = container.querySelector(
 				"." + mediaNotesContainerClass
@@ -180,7 +180,7 @@ export default class MediaNotesPlugin extends Plugin {
 				if (
 					player &&
 					player.mediaLink ===
-						getMediaLinkFromFrontmatter(frontmatter)
+						getPreviewLinkFromFrontmatter(frontmatter)
 				) {
 					return;
 				}
@@ -213,7 +213,7 @@ export default class MediaNotesPlugin extends Plugin {
 			if (!markdownSourceview) return;
 			markdownSourceview.prepend(div);
 
-			const mediaLink = getMediaLinkFromFrontmatter(frontmatter);
+			const mediaLink = getPreviewLinkFromFrontmatter(frontmatter);
 			const ytRef = React.createRef<YouTube>();
 			const eventEmitter = new EventEmitter();
 			this.players[uniqueId] = {
@@ -267,7 +267,7 @@ export default class MediaNotesPlugin extends Plugin {
 				</>
 			);
 		} else {
-			// if there's no media_link, cleanup
+			// if there's no preview_link, cleanup
 			const container = markdownView.containerEl;
 			// cleanup existing players, and save timestamp
 			const div = container.querySelector("." + mediaNotesContainerClass);
@@ -553,7 +553,7 @@ export default class MediaNotesPlugin extends Plugin {
 			this.app.metadataCache.on("changed", (file) => {
 				const frontmatter =
 					this.app.metadataCache.getFileCache(file)?.frontmatter;
-				if (frontmatter && getMediaLinkFromFrontmatter(frontmatter)) {
+				if (frontmatter && getPreviewLinkFromFrontmatter(frontmatter)) {
 					// technically this may not be the same view as the file that changed
 					const markdownView =
 						this.app.workspace.getActiveViewOfType(MarkdownView);

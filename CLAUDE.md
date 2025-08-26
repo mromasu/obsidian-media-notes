@@ -13,11 +13,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-This is an Obsidian plugin that provides a best-in-class video note-taking experience by embedding YouTube players directly in markdown notes. The plugin enables seamless capture and replay of insights from videos, podcasts, and lectures with timestamp-based navigation.
+This is an Obsidian plugin that enables users to see preview of a link by embedding YouTube players and web views directly in markdown notes. The plugin enables seamless capture and replay of insights from videos, podcasts, and lectures with timestamp-based navigation.
 
 ### Source Structure (`src/`)
 
-- **main.tsx** - Main plugin class extending Obsidian's Plugin. Manages multiple player instances, handles commands (play/pause, seek, insert timestamp, speed control), and renders React components into markdown views with `media_link` frontmatter
+- **main.tsx** - Main plugin class extending Obsidian's Plugin. Manages multiple player instances, handles commands (play/pause, seek, insert timestamp, speed control), and renders React components into markdown views with `preview_link` frontmatter
 - **components/media-frame.tsx** - React component that renders YouTube player with custom overlay controls, progress bar, and animated feedback for user actions
 - **app-context.tsx** - React context provider managing UI state (timestamp displays, seek animations, play/pause indicators) with EventEmitter communication
 - **viewPlugin.ts** - CodeMirror extension that intercepts clicks on timestamp links (`[HH:MM:SS]()` format) to seek video playback
@@ -27,8 +27,8 @@ This is an Obsidian plugin that provides a best-in-class video note-taking exper
 
 ### Key Features & Patterns
 
-- **Media Notes Format**: Markdown files with `media_link` frontmatter property containing YouTube URLs
-- **One-Click Save**: Browser bookmarklet creates media notes instantly from YouTube pages
+- **Preview Notes Format**: Markdown files with `preview_link` frontmatter property containing YouTube URLs or web links
+- **One-Click Save**: Browser bookmarklet creates preview notes instantly from YouTube pages
 - **Timestamp Navigation**: Click timestamp links `[HH:MM:SS]()` to jump to specific video moments
 - **Persistent State**: Player positions saved in plugin settings by video ID for resume functionality
 - **Hotkey Commands**: Configurable shortcuts for play/pause, seek forward/back, insert timestamp, speed control, toggle split view
@@ -50,4 +50,4 @@ The bookmarklet enables instant note creation from YouTube:
 2. Script pauses video and captures current timestamp
 3. Creates timestamped URL with `t` parameter
 4. Sanitizes video title for Obsidian filename compatibility
-5. Opens new note via `obsidian://new` URI with pre-filled frontmatter and #Video tag
+5. Opens new note via `obsidian://new` URI with pre-filled frontmatter using `preview_link` property and #Video tag
