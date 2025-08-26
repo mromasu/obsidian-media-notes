@@ -149,28 +149,7 @@ export const WebView: React.FC<WebViewProps> = ({
 
     return (
         <div className="media-notes-webview-container">
-            {/* Loading indicator */}
-            {isLoading && (
-                <div className="webview-loading">
-                    <div className="loading-spinner"></div>
-                    <div className="loading-text">Loading {title}...</div>
-                </div>
-            )}
-
-            {/* Error display */}
-            {error && (
-                <div className="webview-error">
-                    <div className="error-message">
-                        <strong>Failed to load website</strong>
-                        <p>{error}</p>
-                        <button onClick={() => window.location.reload()} className="retry-button">
-                            Retry
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {/* Web view container */}
+            {/* Web view container - always present */}
             <div 
                 ref={containerRef} 
                 className={`webview-frame-container ${isReady ? 'ready' : ''} ${error ? 'error' : ''}`}
@@ -180,6 +159,27 @@ export const WebView: React.FC<WebViewProps> = ({
                     display: error ? 'none' : 'block'
                 }}
             />
+
+            {/* Loading overlay */}
+            {isLoading && (
+                <div className="webview-loading-overlay">
+                    <div className="loading-spinner"></div>
+                    <div className="loading-text">Loading {title}...</div>
+                </div>
+            )}
+
+            {/* Error overlay */}
+            {error && (
+                <div className="webview-error-overlay">
+                    <div className="error-message">
+                        <strong>Failed to load website</strong>
+                        <p>{error}</p>
+                        <button onClick={() => window.location.reload()} className="retry-button">
+                            Retry
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Control buttons (only show when ready and no error) */}
             {isReady && !error && (

@@ -465,15 +465,21 @@ If your plugin does not need CSS, delete this file.
 	background: var(--background-primary);
 }
 
-/* Loading state */
-.webview-loading {
+/* Loading overlay */
+.webview-loading-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
-	height: 100%;
 	background: var(--background-primary);
+	opacity: 0.95;
 	color: var(--text-muted);
+	z-index: 10;
 }
 
 .loading-spinner {
@@ -496,14 +502,20 @@ If your plugin does not need CSS, delete this file.
 	opacity: 0.8;
 }
 
-/* Error state */
-.webview-error {
+/* Error overlay */
+.webview-error-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	height: 100%;
 	padding: 20px;
 	background: var(--background-primary);
+	opacity: 0.98;
+	z-index: 10;
 }
 
 .error-message {
@@ -578,6 +590,7 @@ If your plugin does not need CSS, delete this file.
 	border-radius: 8px;
 	overflow: hidden;
 	background: var(--background-primary);
+	height: 100%;
 }
 
 /* Responsive adjustments */
