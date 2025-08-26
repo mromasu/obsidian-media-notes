@@ -512,6 +512,25 @@ export default class MediaNotesPlugin extends Plugin {
 			},
 		});
 
+		this.addCommand({
+			id: "toggle-media-container",
+			name: "Toggle Media Container",
+			editorCallback: async (editor: Editor, view: MarkdownView) => {
+				const container = view.containerEl;
+				const existingPlayer = container.querySelector(
+					"." + mediaNotesContainerClass
+				) as HTMLElement;
+				
+				if (!existingPlayer) return;
+				
+				if (existingPlayer.classList.contains("media-notes-container-collapsed")) {
+					existingPlayer.classList.remove("media-notes-container-collapsed");
+				} else {
+					existingPlayer.classList.add("media-notes-container-collapsed");
+				}
+			},
+		});
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new SettingsTab(this.app, this));
 

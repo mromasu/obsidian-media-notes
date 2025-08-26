@@ -11,6 +11,12 @@ If your plugin does not need CSS, delete this file.
 	background: rgba(0, 0, 0, 0.1);
 	/* height: 30%; */
 	/* padding: 10px 0; */
+	transition: width 0.2s ease-in-out;
+	overflow: hidden;
+}
+
+.media-notes-container-collapsed {
+	width: 0 !important;
 }
 
 .youtube-iframe {
