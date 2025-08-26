@@ -15,23 +15,18 @@ This is a fork of the original [Media Notes](https://github.com/jemstelos/obsidi
 This plugin is built like Frankenstein from amazing existing code:
 - **[obsidian-media-notes](https://github.com/jemstelos/obsidian-media-notes)** - The foundation and core YouTube functionality
 - **[obsidian-open-gate](https://github.com/nguyenvanduocit/obsidian-open-gate)** - Web view integration and iframe handling
+- **[obsidian-yt-transcript](https://github.com/lstrzepek/obsidian-yt-transcript)** - YouTube transcript extraction functionality
 
 See preview of a link.
 
-Seamlessly capture and replay insights from YouTube videos, podcasts, and lectures into your knowledge base.
+Seamlessly capture and replay insights from YouTube videos, articles, and websites into your knowledge base.
 
 -   **One-Click Save** - Instantly save from YouTube to Obsidian media note
 -   **Media Hotkeys**:- Pause and skip forward/back while staying in your note
 -   **Timestamps** - Insert clickable timestamp links to jump back to key moments
 -   **Resume Playback** - Resume videos from where you left off
 
-<div style="margin: 0 auto;">
-  <img src="images/media-notes.gif">
-</div>
-
 ## Create Web Preview Note
-
-Create preview notes instantly from a Youtube page using the provided bookmarklet (instructions [here](https://obsidian-media-notes.netlify.app/)).
 
 This lets you click a button in your browser bar and automatically create a note for the YouTube video you're watching while continuing playback from the current location.
 
