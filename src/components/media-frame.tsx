@@ -1,5 +1,5 @@
 import { useAppContext } from "../app-context";
-import { formatTimestamp } from "../main";
+import { formatTimestamp, getMatchingCssForUrl } from "../main";
 import * as React from "react";
 import YouTube, { YouTubeEvent, YouTubeProps } from "react-youtube";
 import { CSSTransition } from "react-transition-group";
@@ -112,6 +112,8 @@ export const MediaFrame: React.FC<{
 	
 	// For non-YouTube links, render WebView
 	if (!isYoutube) {
+		const matchingCss = context?.settings ? getMatchingCssForUrl(mediaLink, context.settings.urlCssRules) : '';
+		
 		return (
 			<div className="media-top-container">
 				<div className="media-container web-preview">
@@ -121,6 +123,7 @@ export const MediaFrame: React.FC<{
 						profileKey={context?.settings?.webViewProfileKey || "media-notes-web"}
 						userAgent={context?.settings?.webViewUserAgent}
 						zoomFactor={context?.settings?.webViewZoomFactor}
+						css={matchingCss}
 					/>
 				</div>
 			</div>

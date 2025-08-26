@@ -16,6 +16,11 @@ import YouTube from "react-youtube";
 import { createClickHandlerPlugin } from "./viewPlugin";
 import { EventEmitter } from "events";
 
+export interface CssRule {
+	url: string;
+	css: string;
+}
+
 export interface MediaNotesPluginSettings {
 	seekSeconds: number;
 	verticalPlayerHeight: number;
@@ -34,6 +39,7 @@ export interface MediaNotesPluginSettings {
 	webViewUserAgent: string;
 	webViewZoomFactor: number;
 	webViewProfileKey: string;
+	urlCssRules: CssRule[];
 	mediaData: {
 		[id: string]: {
 			mediaLink: string;
@@ -61,11 +67,19 @@ const DEFAULT_SETTINGS: MediaNotesPluginSettings = {
 	webViewUserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
 	webViewZoomFactor: 1.0,
 	webViewProfileKey: "media-notes-web",
+	urlCssRules: [],
 	mediaData: {},
 };
 
 const mediaNotesContainerClass = "media-notes-container";
 const mediaParentContainerVerticalClass = "media-container-parent-vertical";
+
+export const getMatchingCssForUrl = (url: string, cssRules: CssRule[]): string => {
+	const matchingRules = cssRules.filter(rule => 
+		rule.url.trim() && url.toLowerCase().startsWith(rule.url.toLowerCase().trim())
+	);
+	return matchingRules.map(rule => rule.css).join('\n\n');
+};
 
 export const formatTimestamp = (timestamp: number | undefined) => {
 	if (timestamp === undefined) return "";
@@ -835,5 +849,83 @@ class SettingsTab extends PluginSettingTab {
 						await this.plugin.saveSettings();
 					})
 			);
+
+		// CSS Rules section
+		const cssRulesHeader = containerEl.createEl("h3", { text: "CSS Rules for URLs" });
+		cssRulesHeader.style.marginTop = "2em";
+
+		const cssRulesDesc = containerEl.createEl("p", { 
+			text: "Add custom CSS rules for specific URL patterns. URLs will match any URL that begins with the provided pattern."
+		});
+		cssRulesDesc.style.color = "var(--text-muted)";
+		cssRulesDesc.style.fontSize = "0.9em";
+
+		// Add new CSS rule button
+		new Setting(containerEl)
+			.setName("Add CSS Rule")
+			.setDesc("Add a new URL pattern and CSS rule")
+			.addButton((button) => {
+				button
+					.setButtonText("+ Add Rule")
+					.setClass("mod-cta")
+					.onClick(async () => {
+						this.plugin.settings.urlCssRules.push({ url: "", css: "" });
+						await this.plugin.saveSettings();
+						this.display(); // Refresh the display
+					});
+			});
+
+		// Display existing CSS rules
+		this.plugin.settings.urlCssRules.forEach((rule, index) => {
+			const ruleContainer = containerEl.createDiv();
+			ruleContainer.style.border = "1px solid var(--background-modifier-border)";
+			ruleContainer.style.borderRadius = "8px";
+			ruleContainer.style.padding = "16px";
+			ruleContainer.style.marginBottom = "16px";
+			ruleContainer.style.backgroundColor = "var(--background-secondary)";
+
+			// URL input
+			new Setting(ruleContainer)
+				.setName("URL Pattern")
+				.setDesc("URL prefix to match (e.g., https://github.com/)")
+				.addText((text) =>
+					text
+						.setPlaceholder("https://example.com/")
+						.setValue(rule.url)
+						.onChange(async (value) => {
+							this.plugin.settings.urlCssRules[index].url = value;
+							await this.plugin.saveSettings();
+						})
+				);
+
+			// CSS textarea
+			new Setting(ruleContainer)
+				.setName("CSS Rules")
+				.setDesc("CSS code to inject into matching pages")
+				.addTextArea((text) => {
+					text
+						.setPlaceholder("/* Enter CSS rules here */\nbody { background-color: #f0f0f0; }")
+						.setValue(rule.css)
+						.onChange(async (value) => {
+							this.plugin.settings.urlCssRules[index].css = value;
+							await this.plugin.saveSettings();
+						});
+					text.inputEl.style.minHeight = "100px";
+					text.inputEl.style.fontFamily = "monospace";
+				});
+
+			// Delete button
+			new Setting(ruleContainer)
+				.addButton((button) => {
+					button
+						.setButtonText("Delete Rule")
+						.setWarning()
+						.onClick(async () => {
+							this.plugin.settings.urlCssRules.splice(index, 1);
+							await this.plugin.saveSettings();
+							this.display(); // Refresh the display
+						});
+				});
+		});
 	}
 }
