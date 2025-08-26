@@ -1,5 +1,5 @@
 import { createRoot } from "react-dom/client";
-import { MediaFrame, getVideoId } from "./components/media-frame";
+import { MediaFrame, getVideoId, isYouTubeUrl } from "./components/media-frame";
 import { AppProvider } from "./app-context";
 import {
 	App,
@@ -30,6 +30,10 @@ export interface MediaNotesPluginSettings {
 	defaultSplitMode: "Horizontal" | "Vertical";
 	showTranscript: boolean;
 	transcriptLanguage: string;
+	// Web view settings
+	webViewUserAgent: string;
+	webViewZoomFactor: number;
+	webViewProfileKey: string;
 	mediaData: {
 		[id: string]: {
 			mediaLink: string;
@@ -53,6 +57,10 @@ const DEFAULT_SETTINGS: MediaNotesPluginSettings = {
 	timestampTemplate: "[{ts}]({link})\n",
 	showTranscript: true,
 	transcriptLanguage: "en",
+	// Web view defaults
+	webViewUserAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+	webViewZoomFactor: 1.0,
+	webViewProfileKey: "media-notes-web",
 	mediaData: {},
 };
 
@@ -119,19 +127,23 @@ export default class MediaNotesPlugin extends Plugin {
 	savePlayerTimestamp = (playerId: string) => {
 		const player = this.players[playerId];
 		if (!player) return;
-		player.ytRef.current?.internalPlayer
-			?.getCurrentTime()
-			.then((timestamp: number) => {
-				const mediaId = getVideoId(player.mediaLink);
-				if (!mediaId) return;
-				this.settings.mediaData[mediaId] = {
-					mediaLink: player.mediaLink,
-					lastUpdated: new Date().toISOString(),
-					lastTimestampSeconds: timestamp,
-				};
-				this.saveSettings();
-				this.loadSettings();
-			});
+		
+		// Only save timestamps for YouTube videos
+		if (isYouTubeUrl(player.mediaLink)) {
+			player.ytRef.current?.internalPlayer
+				?.getCurrentTime()
+				.then((timestamp: number) => {
+					const mediaId = getVideoId(player.mediaLink);
+					if (!mediaId) return;
+					this.settings.mediaData[mediaId] = {
+						mediaLink: player.mediaLink,
+						lastUpdated: new Date().toISOString(),
+						lastTimestampSeconds: timestamp,
+					};
+					this.saveSettings();
+					this.loadSettings();
+				});
+		}
 	};
 
 	renderPlayerInView = (markdownView: MarkdownView) => {
@@ -196,22 +208,32 @@ export default class MediaNotesPlugin extends Plugin {
 				eventEmitter,
 			};
 
-			const mediaId = getVideoId(mediaLink);
-			const mediaData =
-				(mediaId && this.settings.mediaData[mediaId]) ||
-				this.settings.mediaData[mediaLink];
-
-			// extract the url param ts from the media link
-			const mediaLinkUrl = new URL(mediaLink);
-			const mediaLinkParams = new URLSearchParams(mediaLinkUrl.search);
-			const mediaLinkTs = mediaLinkParams.get("t");
-			const initSeconds =
-				mediaData?.lastTimestampSeconds ?? mediaLinkTs ?? 0;
-
+			// Initialize timestamp and autoplay for YouTube videos only
+			let initSeconds = 0;
 			let autoplay = false;
-			// If the initial seconds came from the mediaLink, autoplay
-			if (mediaLinkTs && Number(initSeconds) === Number(mediaLinkTs)) {
-				autoplay = true;
+			
+			if (isYouTubeUrl(mediaLink)) {
+				const mediaId = getVideoId(mediaLink);
+				const mediaData =
+					(mediaId && this.settings.mediaData[mediaId]) ||
+					this.settings.mediaData[mediaLink];
+
+				// extract the url param ts from the media link for YouTube
+				try {
+					const mediaLinkUrl = new URL(mediaLink);
+					const mediaLinkParams = new URLSearchParams(mediaLinkUrl.search);
+					const mediaLinkTs = mediaLinkParams.get("t");
+					initSeconds =
+						mediaData?.lastTimestampSeconds ?? (mediaLinkTs ? Number(mediaLinkTs) : 0);
+
+					// If the initial seconds came from the mediaLink, autoplay
+					if (mediaLinkTs && Number(initSeconds) === Number(mediaLinkTs)) {
+						autoplay = true;
+					}
+				} catch (error) {
+					console.warn("Error parsing YouTube URL:", error);
+					initSeconds = 0;
+				}
 			}
 
 			const root = createRoot(div);
@@ -249,7 +271,7 @@ export default class MediaNotesPlugin extends Plugin {
 		const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
 		if (!activeView) return;
 		const player = this.getActiveViewYoutubePlayer(activeView);
-		if (!player || !player.ytRef) return;
+		if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 
 		const seconds = convertTimestampToSeconds(timestamp);
 		player.ytRef.current?.getInternalPlayer()?.seekTo(seconds, true);
@@ -278,7 +300,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Insert Timestamp",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const timestamp =
 					await player.ytRef.current?.internalPlayer?.getCurrentTime();
 				if (!timestamp) return;
@@ -330,7 +352,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Play/Pause",
 			editorCallback: async (_editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const playerState =
 					await player.ytRef.current?.internalPlayer?.getPlayerState();
 				if (playerState === YouTube.PlayerState.PLAYING) {
@@ -352,7 +374,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Toggle horizontal/vertical split",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player) return; // This command works for both YouTube and web views
 				console.log("toggle horizontal view");
 				const container = view.containerEl;
 				const existingPlayer = view.containerEl.querySelector(
@@ -387,7 +409,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Fast Forward",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const currentTime =
 					await player.ytRef.current?.internalPlayer?.getCurrentTime();
 				if (!currentTime) return;
@@ -406,7 +428,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Rewind",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const currentTime =
 					await player.ytRef.current?.internalPlayer?.getCurrentTime();
 				if (!currentTime) return;
@@ -431,7 +453,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Speed up",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const internalPlayer =
 					player.ytRef.current?.getInternalPlayer();
 				if (!internalPlayer) return;
@@ -457,7 +479,7 @@ export default class MediaNotesPlugin extends Plugin {
 			name: "Slow down",
 			editorCallback: async (editor: Editor, view: MarkdownView) => {
 				const player = this.getActiveViewYoutubePlayer(view);
-				if (!player || !player.ytRef) return;
+				if (!player || !player.ytRef || !isYouTubeUrl(player.mediaLink)) return;
 				const internalPlayer =
 					player.ytRef.current?.getInternalPlayer();
 				if (!internalPlayer) return;
@@ -761,6 +783,55 @@ class SettingsTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.transcriptLanguage)
 					.onChange(async (value) => {
 						this.plugin.settings.transcriptLanguage = value || "en";
+						await this.plugin.saveSettings();
+					})
+			);
+
+		// Add heading for web view settings
+		containerEl.createEl("h3", { text: "Web View Settings (for non-YouTube links)" });
+
+		new Setting(containerEl)
+			.setName("Web view user agent")
+			.setDesc(
+				"User agent string for web views. Leave empty for default."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("Mozilla/5.0...")
+					.setValue(this.plugin.settings.webViewUserAgent)
+					.onChange(async (value) => {
+						this.plugin.settings.webViewUserAgent = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Web view zoom factor")
+			.setDesc(
+				"Zoom level for web views (0.5 = 50%, 1.0 = 100%, 2.0 = 200%)"
+			)
+			.addSlider((slider) =>
+				slider
+					.setLimits(0.25, 3.0, 0.25)
+					.setDynamicTooltip()
+					.setValue(this.plugin.settings.webViewZoomFactor)
+					.onChange(async (value) => {
+						this.plugin.settings.webViewZoomFactor = value;
+						await this.plugin.saveSettings();
+					})
+			);
+
+		new Setting(containerEl)
+			.setName("Web view profile key")
+			.setDesc(
+				"Cookie storage profile for web views. Change to isolate cookies between different contexts."
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("media-notes-web")
+					.setValue(this.plugin.settings.webViewProfileKey)
+					.onChange(async (value) => {
+						this.plugin.settings.webViewProfileKey = value || "media-notes-web";
 						await this.plugin.saveSettings();
 					})
 			);

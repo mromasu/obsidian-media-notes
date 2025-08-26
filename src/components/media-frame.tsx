@@ -5,6 +5,7 @@ import YouTube, { YouTubeEvent, YouTubeProps } from "react-youtube";
 import { CSSTransition } from "react-transition-group";
 import { YoutubeTranscript } from "../youtube-transcript";
 import type { TranscriptLine } from "../types";
+import { WebView } from "./web-view";
 
 // Types for enhanced transcript
 interface TranscriptSentence {
@@ -21,8 +22,31 @@ interface TranscriptParagraph {
 }
 
 export const getVideoId = (url: string) => {
-	const urlParams = new URLSearchParams(new URL(url).search);
-	return urlParams.get("v");
+	try {
+		const urlObj = new URL(url);
+		// Check if this is a YouTube URL
+		if (urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be')) {
+			if (urlObj.hostname.includes('youtu.be')) {
+				// Short URL format: https://youtu.be/VIDEO_ID
+				return urlObj.pathname.substring(1);
+			} else {
+				// Standard URL format: https://www.youtube.com/watch?v=VIDEO_ID
+				return urlObj.searchParams.get("v");
+			}
+		}
+		return null; // Not a YouTube URL
+	} catch {
+		return null; // Invalid URL
+	}
+};
+
+export const isYouTubeUrl = (url: string): boolean => {
+	try {
+		const urlObj = new URL(url);
+		return urlObj.hostname.includes('youtube.com') || urlObj.hostname.includes('youtu.be');
+	} catch {
+		return false;
+	}
 };
 
 // Helper function to split text into sentences
@@ -82,38 +106,49 @@ export const MediaFrame: React.FC<{
 	initSeconds: number;
 	autoplay?: boolean;
 }> = ({ mediaLink, ytRef, initSeconds, autoplay }) => {
-	const videoId = getVideoId(mediaLink);
+	const context = useAppContext();
+	const isYoutube = isYouTubeUrl(mediaLink);
+	const videoId = isYoutube ? getVideoId(mediaLink) : null;
+	
+	// For non-YouTube links, render WebView
+	if (!isYoutube) {
+		return (
+			<div className="media-top-container">
+				<div className="media-container web-preview">
+					<WebView 
+						url={mediaLink}
+						title="Web Preview"
+						profileKey={context?.settings?.webViewProfileKey || "media-notes-web"}
+						userAgent={context?.settings?.webViewUserAgent}
+						zoomFactor={context?.settings?.webViewZoomFactor}
+					/>
+				</div>
+			</div>
+		);
+	}
+	
+	// For YouTube links, continue with existing logic
 	if (!videoId) return null;
+	
 	const opts: YouTubeProps["opts"] = {
 		playerVars: {
-			// this needs to be not undefined to work
 			start: initSeconds,
 			autoplay: autoplay ? 1 : 0,
 		},
 	};
-	// const intervalRef = React.useRef<number | undefined>(undefined);
 
-	// const currentTime = ytRef.current?.getCurrentTime();
+	// YouTube-specific state
 	const [maxTime, setMaxTime] = React.useState<number>(0);
 	const [currentTimestamp, setCurrentTimestamp] = React.useState<number>(0);
-
-	// Transcript state
 	const [transcript, setTranscript] = React.useState<TranscriptLine[]>([]);
 	const [transcriptLoading, setTranscriptLoading] = React.useState<boolean>(false);
 	const [transcriptError, setTranscriptError] = React.useState<string | null>(null);
-	
-	// Enhanced transcript state
 	const [transcriptParagraphs, setTranscriptParagraphs] = React.useState<TranscriptParagraph[]>([]);
 	const [currentParagraphIndex, setCurrentParagraphIndex] = React.useState<number>(-1);
 	const [currentSentenceIndex, setCurrentSentenceIndex] = React.useState<number>(-1);
 	const transcriptContainerRef = React.useRef<HTMLDivElement>(null);
-
-	// Calculate the width of the progress bar as a percentage
 	const progressBarWidth = (currentTimestamp / maxTime) * 100;
-
-	// create a ref to store the setInterval function
 	const intervalRef = React.useRef<number | null>(null);
-
 	const [hideProgressBar, setHideProgressBar] = React.useState(true);
 
 	const updateTimestamp = () => {
@@ -128,10 +163,8 @@ export const MediaFrame: React.FC<{
 	const onStateChange: YouTubeProps["onStateChange"] = (
 		event: YouTubeEvent<number>
 	) => {
-		// keep the current timestamp state up to date
 		const handleAsyncCode = async () => {
 			const state = event.data;
-			// if it was paused and now playing, set the current timestamp and making a polling setTimeout to check the player's current time and set the current timestamp every 1s
 			if (state === 1) {
 				updateTimestamp();
 				const interval = window.setInterval(() => {
@@ -140,7 +173,6 @@ export const MediaFrame: React.FC<{
 				intervalRef.current = interval;
 				setHideProgressBar(false);
 			}
-			// if it was playing and is now paused, remove the polling interval and set
 			if ((state === 2 || state === 0) && intervalRef.current) {
 				window.clearInterval(intervalRef.current);
 				setHideProgressBar(true);
@@ -156,8 +188,6 @@ export const MediaFrame: React.FC<{
 			}
 		};
 	}, []);
-
-	const context = useAppContext();
 
 	React.useEffect(() => {
 		if (context?.showTimestamp) {
